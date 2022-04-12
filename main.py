@@ -4,11 +4,13 @@ from textwrap import fill, wrap
 import tkinter as tk
 from tkinter import ANCHOR, font
 from tkinter import filedialog
+import pytesseract
+import easyocr
 import tkinter.ttk as ttk
 import os
 import subprocess
 import PyPDF2
-from PIL import ImageGrab
+from PIL import ImageGrab,Image
 from tkinter.constants import (
     BOTTOM,
     HORIZONTAL,
@@ -24,6 +26,8 @@ from tkinter.constants import (
     TOP
 )
 import ctypes
+#                     Change this >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+pytesseract.pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
 class App(tk.Tk):
@@ -81,19 +85,22 @@ class App(tk.Tk):
     def resetDrawPane(self):
         self.painter.delete('all')
 
-    
-
 
     def backCallBack(self):
-        if self.options_frame.winfo_ismapped():
+        try:
             self.options_frame.pack_forget()
             self.back_button.pack_forget()
             self.painter.pack_forget()
             self.paint_frame.pack_forget()
-        elif :
+        except:
             pass
-        self.heading.pack(pady=25)
+        try:
+            self.back_button1.pack_forget()
+            self.text.pack_forget()
+        except:
+            pass
         self.title_frame.pack(padx=10,pady=10)
+        self.heading.pack(pady=25)
         self.main_frame.pack()
         self.left_frame.pack(side=LEFT)
         self.right_frame.pack(side=RIGHT)
@@ -109,8 +116,22 @@ class App(tk.Tk):
         y1=y+self.painter.winfo_height()
         now = "./drawings/"+str(datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p"))+".jpg"
         ImageGrab.grab().crop((x,y,x1,y1)).save(now)
-        self.current_drawing = now
         #convert image to text from path
+        try:
+            ans = pytesseract.image_to_string(Image.open(now))
+            print(ans)
+            self.options_frame.pack_forget()
+            self.back_button.pack_forget()
+            self.painter.pack_forget()
+            self.paint_frame.pack_forget()
+            self.back_button1 = tk.Button(self,image=self.back_img,borderwidth=0,highlightthickness=5,command=self.backCallBack)
+            self.back_button1.pack(padx=20,pady=20)
+            self.text = tk.Text(self, wrap=WORD, bd=0, height=self.winfo_height()-500, width=self.winfo_width()-100)
+            self.text.insert(END, ans)
+            self.text.pack()
+        except:
+            self.text = tk.Label(self,text="No file Selected",font=("Amaranth",25),bg=self.dark,fg=self.white)
+            self.text.pack(padx=10,pady=10)
         
 
     def paint(self,event):
@@ -123,6 +144,7 @@ class App(tk.Tk):
 
     def uploadCallBack(self,pdf=False):
         # Hide previous things
+        self.main_frame.pack_forget()
         self.title_frame.pack_forget()
         self.right_frame.pack_forget()
         self.left_frame.pack_forget()
@@ -130,29 +152,37 @@ class App(tk.Tk):
         self.image_button.pack_forget()
         self.camera_button.pack_forget()
         self.pdf_button.pack_forget()
-        ans = ""
+        self.back_button1 = tk.Button(self,image=self.back_img,borderwidth=0,highlightthickness=5,command=self.backCallBack)
+        self.back_button1.pack(padx=20,pady=20)
         # Show the upload screen.
         if pdf==False:
-            self.uploaded = filedialog.askopenfilename(filetypes=(("JPG files","*.jpeg"),("PNG files","*.png")))
-            self.output = tk.Label(self,text=self.uploaded,bg=self.dark,fg=self.white)
+            uploaded = filedialog.askopenfilename(filetypes=(("JPG files","*.jpeg"),("PNG files","*.png")))
+            try:
+                ans = pytesseract.image_to_string(Image.open(uploaded))
+                self.text = tk.Text(self, wrap=WORD, bd=0, height=self.winfo_height()-500, width=self.winfo_width()-100)
+                self.text.insert(END, ans)
+                self.text.pack()
+            except:
+                self.text = tk.Label(self,text="No file Selected",font=("Amaranth",25),bg=self.dark,fg=self.white)
+                self.text.pack(padx=10,pady=10)
         else:
-            self.uploaded = filedialog.askopenfilename(filetypes=(("PDF files","*.pdf"),))
-            pdfFile = open(self.uploaded, 'rb')
-            pdfReader = PyPDF2.PdfFileReader(pdfFile) 
-            for i in range(pdfReader.numPages):
-                pageObj = pdfReader.getPage(i) 
-                ans += pageObj.extractText()
-            self.main_frame.pack_forget()
-            self.main_frame.pack(fill=BOTH)
-            self.back_button = tk.Button(self.main_frame,image=self.back_img,borderwidth=0,highlightthickness=5,command=None)
-            self.back_button.pack(padx=20,pady=20)
-            self.text = tk.Text(self.main_frame, wrap=WORD, bd=0, height=500, width=self.winfo_width()-100)
-            self.text.insert(END, ans)
-            self.text.pack()
-
+            uploaded = filedialog.askopenfilename(filetypes=(("PDF files","*.pdf"),))
+            try:
+                pdfFile = open(uploaded, 'rb')
+                pdfReader = PyPDF2.PdfFileReader(pdfFile) 
+                ans = ""
+                for i in range(pdfReader.numPages):
+                    pageObj = pdfReader.getPage(i) 
+                    ans += pageObj.extractText()
+                self.text = tk.Text(self, wrap=WORD, bd=0, height=self.winfo_height()-500, width=self.winfo_width()-100)
+                self.text.insert(END, ans)
+                self.text.pack()
+            except:
+                self.text = tk.Label(self,text="No file Selected",font=("Amaranth",25),bg=self.dark,fg=self.white)
+                self.text.pack(padx=10,pady=10)
+                
             
-            #self.output = tk.Label(self.main_frame,text=ans,bg=self.dark,fg=self.white)
-        #self.output.pack()
+
 
 
     # Main Screen
